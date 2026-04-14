@@ -26,25 +26,13 @@ function padL( pInput : string | number, pPadLeft : number ) : string
     return str_result;
 }
 
-
-function padR( pInput : string | number, pPadRight : number ) : string 
-{
-    let str_result : string = pInput.toString();
-
-    while ( str_result.length < pPadRight )
-    { 
-        str_result = str_result + " ";
-    }
-
-    return str_result;
-}
-
-
 class SubMarine
 {
     pos_x : number = 0;
 
     pos_y : number = 0;
+
+    aim   : number = 0;
 
     constructor( pStartX : number, pStartY : number )
     {
@@ -53,7 +41,16 @@ class SubMarine
         this.pos_y = pStartY;
     }
 
-    public doCommand( pCmdString : string ) : void 
+    public reset()
+    {
+        this.pos_x = 0;
+        
+        this.pos_y = 0;
+
+        this.aim = 0;
+    }
+
+    public doCommandPart1( pCmdString : string ) : void 
     {
         if ( pCmdString.indexOf( "forward" ) >= 0 )
         {
@@ -91,6 +88,40 @@ class SubMarine
         }
     }
 
+    public doCommandPart2( pCmdString : string ) : void 
+    {
+        if ( pCmdString.indexOf( "forward" ) >= 0 )
+        {
+            let move_x = parseInt( pCmdString.substring( 7 ) );
+
+            wl( "Sub - Forward - " + padL( move_x, 5 ) + " From " + padL( this.pos_x , 5 ) + " to " + padL( ( this.pos_x + move_x ) , 5 ) );
+
+            let depth_increase : number = this.aim * move_x;
+
+            wl( "Sub - Forward - Depth " + padL( this.aim, 5 ) + " * X " + padL( move_x, 5 ) + " = " + padL( depth_increase, 5 ) + " From " + padL( this.pos_y , 5 ) + " to " + padL( ( this.pos_y + depth_increase ) , 5 ) );
+
+
+            this.pos_x += move_x;
+            this.pos_y += depth_increase;
+        }
+        else if ( pCmdString.indexOf( "up" ) >= 0 )
+        {
+            let decrease_aim = parseInt( pCmdString.substring( 2 ) );
+
+            wl( "Sub - Up      - Decrease aim " + padL( decrease_aim, 5 ) + " From " + padL( this.aim , 5 ) + " to " + padL( ( this.aim - decrease_aim ) , 5 ) );
+
+            this.aim -= decrease_aim;
+        }
+        else if ( pCmdString.indexOf( "down" ) >= 0 )
+        {
+            let increase_aim = parseInt( pCmdString.substring( 4 ) );
+
+            wl( "Sub - Down    - Increase aim " + padL( increase_aim, 5 ) + " From " + padL( this.aim , 5 ) + " to " + padL( ( this.aim + increase_aim ) , 5 ) );
+
+            this.aim += increase_aim;
+        }
+    }
+
     public getX() : number 
     {
         return this.pos_x;
@@ -102,7 +133,7 @@ class SubMarine
     }
 }
 
-function calcArray( pArray : string[], pSquareWidth : number, pKnzDebug : boolean = true ) : void 
+function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void 
 {
     /*
      * *******************************************************************************************************
@@ -116,10 +147,28 @@ function calcArray( pArray : string[], pSquareWidth : number, pKnzDebug : boolea
 
     for ( const cur_input_str of pArray ) 
     {
-        sub_marine.doCommand( cur_input_str );
+        sub_marine.doCommandPart1( cur_input_str );
     }
 
     result_part_01 = sub_marine.getX() *  sub_marine.getY();
+
+    /*
+     * *******************************************************************************************************
+     * Calculating Part 2
+     * *******************************************************************************************************
+     */
+    wl( "" );
+    wl( "---------------------------------------------------------" );
+    wl( "" );
+
+    sub_marine.reset();
+
+    for ( const cur_input_str of pArray ) 
+    {
+        sub_marine.doCommandPart2( cur_input_str );
+    }
+
+    result_part_02 = sub_marine.getX() *  sub_marine.getY();
 
     wl( "" );
     wl( "Result Part 1 = " + result_part_01 );
@@ -156,7 +205,7 @@ function checkReaddatei() : void
 
         const arrFromFile = await readFileLines();
 
-        calcArray( arrFromFile, 50, true );
+        calcArray( arrFromFile, false );
     } )();
 }
 
@@ -180,9 +229,9 @@ wl( "" );
 wl( "Day 02 - Dive" );
 wl( "" );
 
-calcArray( getTestArray1(), 4, true );
+calcArray( getTestArray1(), true );
 
-//checkReaddatei();
+checkReaddatei();
 
 
 wl( "" )
