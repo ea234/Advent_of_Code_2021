@@ -7,11 +7,61 @@ import * as readline from 'readline';
  * https://www.reddit.com/r/adventofcode/comments/r9824c/2021_day_5_solutions/
  * 
  * 
+ * /home/ea234/.nvm/versions/node/v20.16.0/bin/node ./dist/day05/day_05__Hydrothermal_Venture.js
+ * 
+ * Day 05 - Hydrothermal Venture
+ * 
+ * 0,9 -> 5,9
+ * 8,0 -> 0,8
+ * 9,4 -> 3,4
+ * 2,2 -> 2,1
+ * 7,0 -> 7,4
+ * 6,4 -> 2,0
+ * 0,9 -> 2,9
+ * 3,4 -> 1,4
+ * 0,0 -> 8,8
+ * 5,5 -> 8,2
+ * , R 9 C 0, R 9 C 5
+ * , R 0 C 8, R 8 C 0
+ * , R 4 C 9, R 4 C 3
+ * , R 2 C 2, R 1 C 2
+ * , R 0 C 7, R 4 C 7
+ * , R 4 C 6, R 0 C 2
+ * , R 9 C 0, R 9 C 2
+ * , R 4 C 3, R 4 C 1
+ * , R 0 C 0, R 8 C 8
+ * , R 5 C 5, R 2 C 8
+ * 
+ *      012345678901        012345678901
+ *   0         1         0  1 1    11
+ *   1    1    1         1   111   2
+ *   2    1    1         2    2 1 111
+ *   3         1         3     1 2 2
+ *   4   112111211       4   112313211
+ *   5                   5     1 2
+ *   6                   6    1   1
+ *   7                   7   1     1
+ *   8                   8  1       1
+ *   9  222111           9  222111
+ *  10                  10
+ *  11                  11
+ * 
+ * Result Part 1 = 5
+ * Result Part 2 = 12
+ * 
+ * ----------------------------------------------
+ * 
+ * Result Part 1 = 5294
+ * Result Part 2 = 21698
+ * 
  */
 
 type Coords = { row : number; col : number };
 
 type PropertieMap = Record< string, number >;
+
+const STR_COMBINE_SPACER : string = "   "; 
+
 
 function wl( pString : string ) // wl = short for "writeLog"
 {
@@ -31,6 +81,7 @@ function padL( pInput : string | number, pPadLeft : number ) : string
     return str_result;
 }
 
+
 function padR( pInput : string | number, pPadRight : number ) : string 
 {
     let str_result : string = pInput.toString();
@@ -41,6 +92,27 @@ function padR( pInput : string | number, pPadRight : number ) : string
     }
 
     return str_result;
+}
+
+
+function combineStrings( pString1: string | undefined | null, pString2: string | undefined | null ) : string 
+{
+    const lines1 = ( pString1 != null ? pString1.split(/\r?\n/) : [] );
+    const lines2 = ( pString2 != null ? pString2.split(/\r?\n/) : [] );
+
+    const max_lines = Math.max( lines1.length, lines2.length );
+
+    let result : string[] = [];
+
+    for ( let line_index = 0; line_index < max_lines; line_index++ ) 
+    {
+        const str_a = line_index < lines1.length ? lines1[ line_index ] : "";
+        const str_b = line_index < lines2.length ? lines2[ line_index ] : "";
+
+        result.push( str_a + STR_COMBINE_SPACER + str_b );
+    }
+
+    return result.join("\n");
 }
 
 
@@ -98,8 +170,6 @@ class Line
     y2            : number   = 0;
     x2            : number   = 0;
 
-    knz_is_active : boolean  = false;
-
     constructor( pInput : string ) 
     {
         let [ sx1, sy1, sx2, sy2 ] : string[] = pInput.replace( " -> ", "," ).split( "," );
@@ -113,29 +183,14 @@ class Line
         this.vektor_coords.push( { row : parseInt( sy2! ), col : parseInt( sx2! ) } );
     }
 
-    public getMaxRow()
+    public getMaxRow() : number 
     {
         return Math.max( this.y1, this.y2 );
     }
 
-    public getMaxCol()
+    public getMaxCol() : number 
     {
         return Math.max( this.x1, this.x2 );
-    }
-
-    public setKnzIsActivePart1() : void 
-    {
-        this.knz_is_active = ( this.x1 === this.x2 ) || ( this.y1 === this.y2 );
-    }
-
-    public getKnzIsActivePart1() : boolean
-    {
-        return this.knz_is_active;
-    }
-
-    private getKey( pIndex : number ) : string 
-    {
-        return "R" + this.vektor_coords[ pIndex ]!.row + "C" + this.vektor_coords[ pIndex ]!.col; 
     }
 
     private drawLine( pMapInput : PropertieMap, pCoordsStart : Coords, pCoordsEnd : Coords ) : void 
@@ -151,41 +206,62 @@ class Line
 
         let nr_coords : number = 0;
 
-        if ( delta_row !== 0 )
+        if ( ( delta_row !== 0 ) && ( delta_col !== 0 ) )
         {
-            let end_val = row_to + delta_row;
+            let end_val_row = row_to + delta_row;
+            let end_val_col = col_to + delta_col;
 
-            for ( let cur_row : number = row_from; cur_row != end_val; cur_row += delta_row )
+            let cur_row : number = row_from;
+            let cur_col : number = col_from;
+
+            while ( ( cur_row != end_val_row) && ( cur_col != end_val_col ) )
+            {
+                nr_coords = ( pMapInput[ "R" + cur_row + "C" + cur_col ] ?? 0 ) + 1;
+
+                pMapInput[ "R" + cur_row + "C" + cur_col ] = nr_coords;
+
+                cur_row += delta_row;
+                cur_col += delta_col;
+            }
+        }
+        else if ( delta_row !== 0 )
+        {
+            let end_val_row = row_to + delta_row;
+
+            for ( let cur_row : number = row_from; cur_row != end_val_row; cur_row += delta_row )
             {
                 nr_coords = ( pMapInput[ "R" + cur_row + "C" + col_from ] ?? 0 ) + 1;
 
                 pMapInput[ "R" + cur_row + "C" + col_from ] = nr_coords;
             }
         }
-
-        if ( delta_col !== 0 )
+        else if ( delta_col !== 0 )
         {
-            let end_val = col_to + delta_col;
+            let end_val_col = col_to + delta_col;
 
-            for ( let cur_col : number = col_from; cur_col != end_val; cur_col += delta_col )
+            for ( let cur_col : number = col_from; cur_col != end_val_col; cur_col += delta_col )
             {
-                nr_coords = ( pMapInput[  "R" + row_from + "C" + cur_col ] ?? 0 ) + 1;
+                nr_coords = ( pMapInput[ "R" + row_from + "C" + cur_col ] ?? 0 ) + 1;
 
-                pMapInput[  "R" + row_from + "C" + cur_col ] = nr_coords;
+                pMapInput[ "R" + row_from + "C" + cur_col ] = nr_coords;
             }
         }
     }
 
-    public draw( pMapInput : PropertieMap )
+    public drawLinePart1( pMapInput : PropertieMap ) : void 
     {
-        let index_l : number = 1;
-        //for ( let index_l : number = 1; index_l < this.vektor_coords.length; index_l++ )
+        if ( ( this.x1 === this.x2 ) || ( this.y1 === this.y2 ) )
         {
-            this.drawLine( pMapInput, this.vektor_coords[ index_l - 1]!, this.vektor_coords[ index_l ]! );
+            this.drawLine( pMapInput, this.vektor_coords[ 0 ]!, this.vektor_coords[ 1 ]! );
         }
     }
 
-    public toString() 
+    public drawLinePart2( pMapInput : PropertieMap ) : void 
+    {
+        this.drawLine( pMapInput, this.vektor_coords[ 0 ]!, this.vektor_coords[ 1 ]! );
+    }
+
+    public toString() : string 
     {
         let str_result : string = "";
 
@@ -220,9 +296,8 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
 
         let line_cur = new Line( cur_input_str );
 
-        line_cur.setKnzIsActivePart1();
-
         grid_max_row = Math.max( grid_max_row, line_cur.getMaxRow() );
+
         grid_max_col = Math.max( grid_max_col, line_cur.getMaxCol() );
 
         vektor_line.push( line_cur );
@@ -236,28 +311,35 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
         }
     }
 
-
     /*
      * *******************************************************************************************************
-     * Setting up the virtual grid (Drawing the lines)
+     * Drawing the lines into the maps for part 1 and part 2
      * *******************************************************************************************************
      */
 
-    let map_input : PropertieMap = {};
+    let map_part_1 : PropertieMap = {};
+    let map_part_2 : PropertieMap = {};
 
     for ( let line_inst of vektor_line )
     {
-        if ( line_inst.getKnzIsActivePart1() )
-        { 
-            line_inst.draw( map_input ); 
-        }
+        line_inst.drawLinePart1( map_part_1 ); 
+        line_inst.drawLinePart2( map_part_2 ); 
     }
 
-    result_part_01 = countXFields( map_input, 0, 0, grid_max_row, grid_max_col );
+    /*
+     * *******************************************************************************************************
+     * Counting the fields greater than 1
+     * *******************************************************************************************************
+     */
+
+    result_part_01 = countXFields( map_part_1, 0, 0, grid_max_row, grid_max_col );
+
+    result_part_02 = countXFields( map_part_2, 0, 0, grid_max_row, grid_max_col );
 
     if ( pKnzDebug )
     {
-        let dbg_map_comb = getDebugMap( map_input,  0, 0, 12, 12 );
+        let dbg_map_comb = combineStrings( getDebugMap( map_part_1,  0, 0, grid_max_row, grid_max_col ), 
+                                           getDebugMap( map_part_2,  0, 0, grid_max_row, grid_max_col )  );
 
         wl( "" );
         wl( dbg_map_comb  );
@@ -328,7 +410,7 @@ wl( "" );
 
 calcArray( getTestArray1(), true );
 
-checkReaddatei();
+//checkReaddatei();
 
 wl( "" )
 wl( "Day 05 - End " );
