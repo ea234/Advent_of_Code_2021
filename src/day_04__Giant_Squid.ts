@@ -33,6 +33,7 @@ import * as readline from 'readline';
  *   2   0  12   3   7      2   0  12   3   7
  * 
  * 7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+ * 
  * Nr.   0 =   7
  * Nr.   1 =   4
  * Nr.   2 =   9
@@ -84,10 +85,9 @@ import * as readline from 'readline';
  *  22  11  13   6   5     22  -1  13   6  -1
  *   2   0  12   3   7     -1  -1  12   3  -1
  * 
- * 
  * -------------------------------------------------------------------------------------
  * 
- * Bingo-Bingocard
+ * Bingo First Card
  *  Bingo Card 2
  *  14  21  17  24   4     -1  -1  -1  -1  -1
  *  10  16  15   9  19     10  16  15  -1  19
@@ -95,8 +95,8 @@ import * as readline from 'readline';
  *  22  11  13   6   5     22  -1  13   6  -1
  *   2   0  12   3   7     -1  -1  12   3  -1
  * 
- * last nr 24
- * non hit 188
+ * Last Number   24
+ * Non Hit Value 188
  * 
  * -------------------------------------------------------------------------------------
  * 
@@ -108,14 +108,13 @@ import * as readline from 'readline';
  *  20  11  10  24   4     20  -1  -1  -1  -1
  *  14  21  16  12   6     -1  -1  -1  12   6
  * 
- * last nr 13
- * non hit 148
+ * Last Number   13
+ * Non Hit Value 148
  * 
  * Result Part 1 = 4512
  * Result Part 2 = 1924
  * 
  * Day 04 - End
- * 
  * 
  * -------------------------------------------------------------------------------------
  * 
@@ -146,7 +145,6 @@ import * as readline from 'readline';
  * Result Part 1 = 67716
  * Result Part 2 = 1830
  */
-
 
 const BINGO_ROWS : number = 5;
 const BINGO_COLS : number = 5;
@@ -212,7 +210,8 @@ class BingoCard
     bingo_card_nr       : number = 0;
 
     bingo_numbers_value : number[];
-    bingo_numbers_hit   : number[];
+
+    bingo_numbers_hit   : number[] = [];
 
     last_number         : number = 0;
 
@@ -223,7 +222,18 @@ class BingoCard
         this.bingo_card_nr = pBingoCardNr;
 
         this.bingo_numbers_value = new Array<number>( BINGO_ROWS * BINGO_COLS );
-        this.bingo_numbers_hit   = new Array<number>( 1 );
+    }
+
+    public addRow( pRow : number, pInput : string ) : void 
+    {
+        const num_array : number[] = pInput.trim().split( /\s+/ ).map( Number ); 
+
+        let bingo_idx = pRow * BINGO_COLS;
+
+        for ( let col_nr : number = 0; col_nr < num_array.length; col_nr++ )
+        {
+            this.bingo_numbers_value[ bingo_idx + col_nr ] = num_array[ col_nr ]!;
+        }
     }
 
     public reset()
@@ -237,12 +247,24 @@ class BingoCard
 
     public checkValue( pNumber : number ) : boolean
     {
+        /*
+         * If the card has already "Bingo", the new number is not checked.
+         * Otherwise, it could reduce the number of not hit values.
+         */
         if ( this.knz_has_bingo ) return false;
 
         this.last_number = pNumber;
 
+        /*
+         * Check if the new number is part of the hit array.
+         */
         if( this.bingo_numbers_hit.includes( this.last_number ) )
         {
+            /*
+             * Check each number in the hit-array.
+             *
+             * If the new value is found, replace the value with a -1.
+             */
             for ( let bingo_idx : number = 0; bingo_idx < this.bingo_numbers_hit.length; bingo_idx++ )
             {
                 if ( this.bingo_numbers_hit[ bingo_idx ] === this.last_number )
@@ -251,6 +273,11 @@ class BingoCard
                 }
             }
 
+            /*
+             * Check card rows and cols for "Bingo"
+             *
+             * If the card has Bingo, the the Bingo-Flag to true, and return true.
+             */
             if ( this.checkBingo() )
             {
                 this.knz_has_bingo = true;
@@ -259,18 +286,24 @@ class BingoCard
             }
         }
 
+        /*
+         * If the new value is not found, or the card has no "Bingo" return false.
+         */
         return false;
     }
 
-    public checkBingo() : boolean 
+    private checkBingo() : boolean 
     {
+        /*
+         * Checking for "Bingo" in the rows.
+         */
         for ( let row_nr : number = 0; row_nr < BINGO_ROWS; row_nr++ )
         {
             let row_index : number = row_nr * BINGO_COLS;
 
             let row_has_bingo : boolean = true;
 
-            for ( let col_nr : number = 0; ( col_nr < BINGO_COLS ) && ( row_has_bingo ); col_nr++ )
+            for ( let col_nr : number = 0; col_nr < BINGO_COLS; col_nr++ )
             {
                 if ( this.bingo_numbers_hit[ row_index + col_nr ]! >= 0 ) 
                 {
@@ -286,6 +319,9 @@ class BingoCard
             }
         }
 
+        /*
+         * Checking for "Bingo" in the cols.
+         */
         for ( let col_nr : number = 0; col_nr < BINGO_COLS; col_nr++ )
         {
             let col_has_bingo : boolean = true;
@@ -309,7 +345,7 @@ class BingoCard
         return false;
     }
 
-    public getSumNonHitFields() : number
+    private getSumNonHitFields() : number
     {
         let sum_non_hit_fields : number = 0;
 
@@ -324,7 +360,7 @@ class BingoCard
         return sum_non_hit_fields;
     }
 
-    public calcResultPart01() : number 
+    public calcResult() : number 
     {
         wl( "Last Number   " + this.last_number          );
         wl( "Non Hit Value " + this.getSumNonHitFields() );
@@ -332,19 +368,7 @@ class BingoCard
         return this.getSumNonHitFields() * this.last_number;
     }
 
-    public addBingoRow( pRow : number, pInput : string ) : void 
-    {
-        const num_array : number[] = pInput.trim().split( /\s+/ ).map( Number ); 
-
-        let bingo_idx = pRow * BINGO_COLS;
-
-        for ( let col_nr : number = 0; col_nr < num_array.length; col_nr++ )
-        {
-            this.bingo_numbers_value[ bingo_idx + col_nr ] = num_array[ col_nr ]!;
-        }
-    }
-    
-    public getStringValues() : string 
+    private getStringValues() : string 
     {
         let str_result : string = "";
 
@@ -365,7 +389,7 @@ class BingoCard
         return str_result;
     }
 
-    public getStringHit() : string 
+    private getStringHit() : string 
     {
         let str_result : string = "";
 
@@ -392,9 +416,7 @@ class BingoCard
 
         let card_val : string = this.getStringValues();
 
-        let cards_combined : string = combineStrings( card_val, card_hit );
-
-        return " Bingo Card " + this.bingo_card_nr + "\n" + cards_combined;
+        return " Bingo Card " + this.bingo_card_nr + "\n" + combineStrings( card_val, card_hit );
     }
 }
 
@@ -430,7 +452,7 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
         {
             if ( bingo_card_nr !== -1 )
             {
-                bingo_cards[ bingo_card_nr ]?.addBingoRow( bingo_row_nr, pArray[ idx_input ]! );
+                bingo_cards[ bingo_card_nr ]?.addRow( bingo_row_nr, pArray[ idx_input ]! );
 
                 bingo_row_nr++;
             }
@@ -455,21 +477,18 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     wl( numbers_to_call );
 
     let bingo_first_card : BingoCard | undefined = undefined;
+
     let bingo_last_card  : BingoCard | undefined = undefined;
 
     const number_array : number[] = numbers_to_call.trim().split( "," ).map( Number ); 
 
-    let knz_break_zuf : boolean = false;
-
-    for ( let idx_num_array : number = 0; idx_num_array < numbers_to_call.length; idx_num_array++ )
+    for ( let idx_num_array : number = 0; idx_num_array < number_array.length; idx_num_array++ )
     {
         wl( "Nr. " + padL( idx_num_array, 3 ) + " = " + padL( number_array[ idx_num_array ] ?? -4 , 3 ))
 
         for ( let cur_bingo_card of bingo_cards )
         {
-            knz_break_zuf = cur_bingo_card.checkValue( number_array[ idx_num_array ]! );
-
-            if ( knz_break_zuf )
+            if ( cur_bingo_card.checkValue( number_array[ idx_num_array ]! ) )
             {
                 if ( bingo_first_card === undefined )
                 {
@@ -493,6 +512,11 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
         }
     }
 
+    /*
+     * *******************************************************************************************************
+     * Calculating the result-values for part 1 and 2
+     * *******************************************************************************************************
+     */
     wl( "" );
     wl( "-------------------------------------------------------------------------------------" );
     wl( "" );
@@ -501,8 +525,9 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     {
         wl( "Bingo First Card" );
         wl( bingo_first_card.toString() );
+        wl( "" );
 
-        result_part_01 = bingo_first_card.calcResultPart01();
+        result_part_01 = bingo_first_card.calcResult();
     }
 
     wl( "" );
@@ -513,8 +538,9 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     {
         wl( "Bingo Last Card" );
         wl( bingo_last_card.toString() );
+        wl( "" );
 
-        result_part_02 = bingo_last_card.calcResultPart01();
+        result_part_02 = bingo_last_card.calcResult();
     }
 
     wl( "" );
