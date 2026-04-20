@@ -87,6 +87,10 @@ import * as readline from 'readline';
 
 type PropertieMap = Record< string, number >;
 
+type Parsed = { row: number; col: number; } | null;
+
+const VALUE_NOT_PRESENT = -1;
+
 const STR_COMBINE_SPACER : string = "   "; 
 
 
@@ -109,20 +113,7 @@ function padL( pInput : string | number, pPadLeft : number ) : string
 }
 
 
-function padR( pInput : string | number, pPadRight : number ) : string 
-{
-    let str_result : string = pInput.toString();
-
-    while ( str_result.length < pPadRight )
-    { 
-        str_result = str_result + " ";
-    }
-
-    return str_result;
-}
-
-
-function combineStrings( pString1: string | undefined | null, pString2: string | undefined | null ) : string 
+function combineStrings( pString1 : string | undefined | null, pString2 : string | undefined | null ) : string 
 {
     const lines1 = ( pString1 != null ? pString1.split(/\r?\n/) : [] );
     const lines2 = ( pString2 != null ? pString2.split(/\r?\n/) : [] );
@@ -172,21 +163,19 @@ function getDebugMap( pHashMap : PropertieMap, pMaxRows : number, pMaxCols : num
 }
 
 
-const VALUE_NOT_PRESENT = -1;
-
 function isLowSpot( pHashMap : PropertieMap, pMaxRows : number, pMaxCols : number, pRow : number, pCol : number, pKnzDebug : boolean ) : boolean
 {
-    let number_check         : number = pHashMap[ "R" + pRow + "C" + pCol ]!;
+    let number_check : number = pHashMap[ "R" + pRow + "C" + pCol ]!;
 
     let value_right  : number = pHashMap[ "R" + pRow + "C" + ( pCol + 1 ) ] ?? VALUE_NOT_PRESENT;
     let value_left   : number = pHashMap[ "R" + pRow + "C" + ( pCol - 1 ) ] ?? VALUE_NOT_PRESENT;
     let value_above  : number = pHashMap[ "R" + ( pRow - 1 ) + "C" + pCol ] ?? VALUE_NOT_PRESENT;
     let value_below  : number = pHashMap[ "R" + ( pRow + 1 ) + "C" + pCol ] ?? VALUE_NOT_PRESENT;
 
-    let knz_x_right : boolean = ( value_right > number_check );
-    let knz_x_left  : boolean = ( value_left  > number_check );
-    let knz_x_above : boolean = ( value_above > number_check );
-    let knz_x_below : boolean = ( value_below > number_check );
+    let knz_x_right  : boolean = ( value_right > number_check );
+    let knz_x_left   : boolean = ( value_left  > number_check );
+    let knz_x_above  : boolean = ( value_above > number_check );
+    let knz_x_below  : boolean = ( value_below > number_check );
 
     /*
      * Edges
@@ -223,8 +212,6 @@ function isLowSpot( pHashMap : PropertieMap, pMaxRows : number, pMaxCols : numbe
     return knz_x_below && knz_x_above && knz_x_left && knz_x_right;
 }
 
-type Parsed = { row: number; col: number; } | null;
-
 
 function parseRC( pInput : string ) : Parsed 
 {
@@ -232,9 +219,9 @@ function parseRC( pInput : string ) : Parsed
 
   if ( !reg_match ) return null;
 
-  const parsed_row = parseInt( reg_match[1]!, 10);
+  const parsed_row = parseInt( reg_match[1]!, 10 );
 
-  const parsed_col = parseInt( reg_match[2]!, 10);
+  const parsed_col = parseInt( reg_match[2]!, 10 );
 
   if ( Number.isNaN( parsed_row ) || Number.isNaN( parsed_col ) ) return null;
 
@@ -291,7 +278,7 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
 {
     /*
      * *******************************************************************************************************
-     * Creating Map
+     * Creating the Map from the input values
      * *******************************************************************************************************
      */
 
@@ -319,21 +306,21 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
 
     grid_cols++;
 
-
-    let grid_rows_idx : number = grid_rows - 1; 
-    let grid_cols_idx : number = grid_cols - 1;
-
     /*
      * *******************************************************************************************************
      * Calculating Part 1
      * *******************************************************************************************************
      */
 
+    let grid_rows_idx    : number = grid_rows - 1; 
+
+    let grid_cols_idx    : number = grid_cols - 1;
+
     let low_spot_keys    : string[] = [];
 
     let low_spot_numbers : number[] = [];
 
-    let low_spot_map  : PropertieMap = {};
+    let low_spot_map     : PropertieMap = {};
 
     for ( let cur_row = 0; cur_row < grid_rows; cur_row++ )
     {
@@ -369,7 +356,7 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
                 low_spot_numbers.push( cur_number + 1 );
 
                 /*
-                 * Save the number in the low spot map
+                 * Save the number in the low spot map (also debug)
                  */
                 low_spot_map[ "R" + cur_row + "C" + cur_col ] = cur_number;
             }
@@ -404,6 +391,8 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     /*
      * *******************************************************************************************************
      * Calculating Part 2
+     * Get the region for a low spot.
+     * The region is surrounded by the grid perimeters and by the value of 9.
      * *******************************************************************************************************
      */
 
@@ -413,6 +402,9 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
 
     for ( const low_spot_key of low_spot_keys )
     {
+        /*
+         * Parse the row and col from the key
+         */
         let rc_type = parseRC( low_spot_key );
 
         if ( rc_type === null ) 
@@ -422,33 +414,59 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
             continue;
         }
 
+        /*
+         * Define a map for the region for the current low spot
+         */
         let map_mark : PropertieMap = {};
 
+        /*
+         * Get the region from the low spot
+         */
         let nr_basin_val = checkBasin( map_input, map_mark, grid_rows, grid_cols, rc_type.row, rc_type.col );
 
+        /*
+         * The number of saved coords are the needed value for part 2.
+         * (Number of grid-positions for the region of the low spot)
+         */
         const number_of_keys = Object.keys( map_mark ).length;
 
+        /*
+         * Save the number of Keys in the result vector
+         */
         vec_basin_sizes.push( number_of_keys );
 
-        wl( "" )
-        wl( "Nr. " + padL( ls_nr, 4 ) + " Key " + low_spot_key + "  Value " + map_input[ low_spot_key ] + "  Basin Value " + nr_basin_val + "   number_of_keys " + number_of_keys );
-        wl( "" )
-        wl( getDebugMap( map_mark, grid_rows, grid_cols ) );
-        wl( "" );
+        /*
+         * Do some debug-stuff.
+         */
+        wl( "Nr. " + padL( ls_nr, 4 ) + " Key " + low_spot_key + "  Value " + map_input[ low_spot_key ] + "  Basin Value " + padL( nr_basin_val, 4 ) + "   number_of_keys " + padL( number_of_keys, 3 ) );
+
+        if ( pKnzDebug )
+        {
+            wl( "" )
+            wl( getDebugMap( map_mark, grid_rows, grid_cols ) );
+            wl( "" );
+            wl( "" )
+        }
 
         ls_nr++;
     }
 
+    /*
+     * Sort the basin-vector descending
+     */
     vec_basin_sizes.sort( ( a, b ) => b - a );     
     
     wl( "" )
-    wl( "vec_basin_sizes 1 " + padL( vec_basin_sizes[0]!, 6 ) );
-    wl( "vec_basin_sizes 2 " + padL( vec_basin_sizes[1]!, 6 ) );
-    wl( "vec_basin_sizes 3 " + padL( vec_basin_sizes[2]!, 6 ) );
+    wl( "vec_basin_sizes 1 " + padL( vec_basin_sizes[ 0 ]!, 6 ) );
+    wl( "vec_basin_sizes 2 " + padL( vec_basin_sizes[ 1 ]!, 6 ) );
+    wl( "vec_basin_sizes 3 " + padL( vec_basin_sizes[ 2 ]!, 6 ) );
 
-    result_part_02 = vec_basin_sizes[0]! * vec_basin_sizes[1]! * vec_basin_sizes[2]!;
+    /*
+     * Calculate the result for part 2.
+     */
+    result_part_02 = vec_basin_sizes[ 0 ]! * vec_basin_sizes[ 1 ]! * vec_basin_sizes[ 2 ]!;
     
-    console.log(vec_basin_sizes);
+    console.log( vec_basin_sizes );
 
     wl( "" );
     wl( "Result Part 1 = " + result_part_01 );
