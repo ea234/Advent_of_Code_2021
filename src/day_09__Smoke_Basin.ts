@@ -23,13 +23,65 @@ import * as readline from 'readline';
  * 
  * (4) [2, 1, 6, 6]
  * 
+ * Nr.    0 Key R0C1  Value 1
+ * Nr.    1 Key R0C9  Value 0
+ * Nr.    2 Key R2C2  Value 5
+ * Nr.    3 Key R4C6  Value 5
+ * 
+ * Nr.    0 Key R0C1  Value 1  Basin Value 9   number_of_keys 3
+ * 
+ *      0123456789
+ *   0  21........
+ *   1  3.........
+ *   2  ..........
+ *   3  ..........
+ *   4  ..........
+ * 
+ * 
+ * Nr.    1 Key R0C9  Value 0  Basin Value 28   number_of_keys 9
+ * 
+ *      0123456789
+ *   0  .....43210
+ *   1  ......4.21
+ *   2  .........2
+ *   3  ..........
+ *   4  ..........
+ * 
+ * 
+ * Nr.    2 Key R2C2  Value 5  Basin Value 115   number_of_keys 14
+ * 
+ *      0123456789
+ *   0  ..........
+ *   1  ..878.....
+ *   2  .85678....
+ *   3  87678.....
+ *   4  .8........
+ * 
+ * 
+ * Nr.    3 Key R4C6  Value 5  Basin Value 70   number_of_keys 9
+ * 
+ *      0123456789
+ *   0  ..........
+ *   1  ..........
+ *   2  .......8..
+ *   3  ......678.
+ *   4  .....65678
+ * 
+ * vec_basin_sizes 1     14
+ * vec_basin_sizes 2      9
+ * vec_basin_sizes 3      9
+ * 
+ * (4) [14, 9, 9, 3]
+ * 
  * Result Part 1 = 15
- * Result Part 2 = 0
+ * Result Part 2 = 1134
  * 
  * Day 09 - End
  * 
+ * ------------------------------------------------------------------
+ * 
  * Result Part 1 = 631
- * Result Part 2 = 0
+ * Result Part 2 = 821560
  * 
  */
 
@@ -171,6 +223,69 @@ function isLowSpot( pHashMap : PropertieMap, pMaxRows : number, pMaxCols : numbe
     return knz_x_below && knz_x_above && knz_x_left && knz_x_right;
 }
 
+type Parsed = { row: number; col: number; } | null;
+
+
+function parseRC( pInput : string ) : Parsed 
+{
+  const reg_match = pInput.match(/^R(\d+)C(\d+)$/i);
+
+  if ( !reg_match ) return null;
+
+  const parsed_row = parseInt( reg_match[1]!, 10);
+
+  const parsed_col = parseInt( reg_match[2]!, 10);
+
+  if ( Number.isNaN( parsed_row ) || Number.isNaN( parsed_col ) ) return null;
+
+  return { row: parsed_row, col: parsed_col };
+}
+
+
+function checkBasin( pHashMap : PropertieMap, pMarkMap : PropertieMap, pMaxRows : number, pMaxCols : number, pRow : number, pCol : number ) : number
+{
+    /*
+     * Check grid boundaries
+     */
+    if ( pRow < 0         ) return 0;
+    if ( pRow >= pMaxRows ) return 0;
+
+    if ( pCol < 0         ) return 0; 
+    if ( pCol >= pMaxCols ) return 0;
+
+    /*
+     * Check field already seen
+     */
+    if ( ( pMarkMap[ "R" + pRow + "C" + pCol ] ?? -1 ) >= 0 ) return 0;
+
+    /*
+     * Get the number at pRow/pCol
+     */
+    let number_check : number = pHashMap[ "R" + pRow + "C" + pCol ]!;
+
+    /*
+     * If the number is 9, the row col is not part of the basin
+     */
+    if ( number_check === 9 ) return 0;
+
+    /*
+     * Mark the current field as seen
+     */
+    pMarkMap[ "R" + pRow + "C" + pCol ] = number_check;
+
+    let nr_result : number = number_check + 1;
+
+    nr_result += checkBasin( pHashMap, pMarkMap, pMaxRows, pMaxCols, pRow + 1, pCol );
+
+    nr_result += checkBasin( pHashMap, pMarkMap, pMaxRows, pMaxCols, pRow - 1, pCol );
+
+    nr_result += checkBasin( pHashMap, pMarkMap, pMaxRows, pMaxCols, pRow, pCol + 1 );
+
+    nr_result += checkBasin( pHashMap, pMarkMap, pMaxRows, pMaxCols, pRow, pCol - 1 );
+
+    return nr_result;
+}
+
 
 function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void 
 {
@@ -208,13 +323,13 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     let grid_rows_idx : number = grid_rows - 1; 
     let grid_cols_idx : number = grid_cols - 1;
 
-
     /*
      * *******************************************************************************************************
      * Calculating Part 1
      * *******************************************************************************************************
      */
 
+    let low_spot_keys    : string[] = [];
 
     let low_spot_numbers : number[] = [];
 
@@ -226,21 +341,40 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
         {
             let cur_number : number = map_input[ "R" + cur_row + "C" + cur_col ]!;
 
+            /*
+             * Number 9 is a high spot, no need to check.
+             */
             if ( cur_number === 9 ) continue;
 
+            /*
+             * Check if its a low spot
+             */
             let knz_is_low_spot : boolean = isLowSpot( map_input, grid_rows_idx, grid_cols_idx, cur_row, cur_col, pKnzDebug );
 
             if ( knz_is_low_spot )
             {
+                /*
+                 * Calculate sum for part 1
+                 */
                 result_part_01 += cur_number + 1;
 
+                /*
+                 * Save the low spot key for part 2
+                 */
+                low_spot_keys.push( "R" + cur_row + "C" + cur_col )
+
+                /*
+                 * Save the number for debug purposes (not needed)
+                 */
                 low_spot_numbers.push( cur_number + 1 );
 
+                /*
+                 * Save the number in the low spot map
+                 */
                 low_spot_map[ "R" + cur_row + "C" + cur_col ] = cur_number;
             }
         }
     }
-
 
     if ( pKnzDebug )
     {
@@ -249,15 +383,72 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
         wl( "" );
         wl( combineStrings( getDebugMap( map_input, grid_rows, grid_cols ), getDebugMap( low_spot_map, grid_rows, grid_cols ) ) );
         wl( "" );
+        wl( "" );
 
         console.log( low_spot_numbers );
+
+        wl( "" );
+
+        let ls_nr : number = 0;
+
+        for ( const low_spot_key of low_spot_keys )
+        {
+            wl( "Nr. " + padL( ls_nr, 4 ) + " Key " + low_spot_key + "  Value " + map_input[ low_spot_key ] );
+
+            ls_nr++;
+        }
+
+        wl( "" );
     }
 
     /*
      * *******************************************************************************************************
-     * Calculating the result-values for part 1 and 2
+     * Calculating Part 2
      * *******************************************************************************************************
      */
+
+    let vec_basin_sizes : number [] = [];
+
+    let ls_nr : number = 0;
+
+    for ( const low_spot_key of low_spot_keys )
+    {
+        let rc_type = parseRC( low_spot_key );
+
+        if ( rc_type === null ) 
+        {
+            wl( "#### ERROR #### Nr. " + padL( ls_nr, 4 ) + " Key " + low_spot_key + "  Value " + map_input[ low_spot_key ] );
+
+            continue;
+        }
+
+        let map_mark : PropertieMap = {};
+
+        let nr_basin_val = checkBasin( map_input, map_mark, grid_rows, grid_cols, rc_type.row, rc_type.col );
+
+        const number_of_keys = Object.keys( map_mark ).length;
+
+        vec_basin_sizes.push( number_of_keys );
+
+        wl( "" )
+        wl( "Nr. " + padL( ls_nr, 4 ) + " Key " + low_spot_key + "  Value " + map_input[ low_spot_key ] + "  Basin Value " + nr_basin_val + "   number_of_keys " + number_of_keys );
+        wl( "" )
+        wl( getDebugMap( map_mark, grid_rows, grid_cols ) );
+        wl( "" );
+
+        ls_nr++;
+    }
+
+    vec_basin_sizes.sort( ( a, b ) => b - a );     
+    
+    wl( "" )
+    wl( "vec_basin_sizes 1 " + padL( vec_basin_sizes[0]!, 6 ) );
+    wl( "vec_basin_sizes 2 " + padL( vec_basin_sizes[1]!, 6 ) );
+    wl( "vec_basin_sizes 3 " + padL( vec_basin_sizes[2]!, 6 ) );
+
+    result_part_02 = vec_basin_sizes[0]! * vec_basin_sizes[1]! * vec_basin_sizes[2]!;
+    
+    console.log(vec_basin_sizes);
 
     wl( "" );
     wl( "Result Part 1 = " + result_part_01 );
@@ -319,7 +510,7 @@ wl( "" );
 
 calcArray( getTestArray1(), true );
 
-checkReaddatei();
+//checkReaddatei();
 
 wl( "" )
 wl( "Day 09 - End " );
