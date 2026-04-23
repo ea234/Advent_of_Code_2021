@@ -6,43 +6,66 @@ import * as readline from 'readline';
  * 
  * https://www.reddit.com/r/adventofcode/comments/rd0s54/2021_day_10_solutions/
  * 
+ * 
  * /home/ea234/.nvm/versions/node/v20.16.0/bin/node ./dist/day10/day_10__Syntax_Scoring.js
  * 
  * Day 10 - Syntax Scoring
  * 
- * cur input ()                             result =      0    -- OK --
- * cur input []                             result =      0    -- OK --
- * cur input {()()()}                       result =      0    -- OK --
- * cur input (((((((((())))))))))           result =      0    -- OK --
- * cur input [<>({}){}[([])<>]]             result =      0    -- OK --
- * cur input <([{}])>                       result =      0    -- OK --
- * cur input <([]){()}[{}])                 result =      3    ## ERROR ##
- * cur input (]                             result =     57    ## ERROR ##
- * cur input (((()))}                       result =   1197    ## ERROR ##
- * cur input {()()()>                       result =  25137    ## ERROR ##
+ * Part 1 ()                               Score-Value  =      0    -- OK --
+ * Part 1 []                               Score-Value  =      0    -- OK --
+ * Part 1 {()()()}                         Score-Value  =      0    -- OK --
+ * Part 1 (((((((((())))))))))             Score-Value  =      0    -- OK --
+ * Part 1 [<>({}){}[([])<>]]               Score-Value  =      0    -- OK --
+ * Part 1 <([{}])>                         Score-Value  =      0    -- OK --
+ * Part 1 <([]){()}[{}])                   Score-Value  =      3    ## ERROR ##
+ * Part 1 (]                               Score-Value  =     57    ## ERROR ##
+ * Part 1 (((()))}                         Score-Value  =   1197    ## ERROR ##
+ * Part 1 {()()()>                         Score-Value  =  25137    ## ERROR ##
+ * 
+ * Part 2 ()                             = Completion String             Score-Value =       0
+ * Part 2 []                             = Completion String             Score-Value =       0
+ * Part 2 {()()()}                       = Completion String             Score-Value =       0
+ * Part 2 (((((((((())))))))))           = Completion String             Score-Value =       0
+ * Part 2 [<>({}){}[([])<>]]             = Completion String             Score-Value =       0
+ * Part 2 <([{}])>                       = Completion String             Score-Value =       0
+ * 
+ * (6) [0, 0, 0, 0, 0, 0]
+ * 
+ * Mid Index 3
  * 
  * Result Part 1 = 26394
  * Result Part 2 = 0
  * 
  * 
- * cur input [({(<(())[]>[[{[]{<()<>>       result =      0    -- OK --
- * cur input [(()[<>])]({[<{<<[]>>(         result =      0    -- OK --
- * cur input {([(<{}[<>[]}>{[]{[(<()>       result =   1197    ## ERROR ##
- * cur input (((({<>}<{<{<>}{[]{[]{}        result =      0    -- OK --
- * cur input [[<[([]))<([[{}[[()]]]         result =      3    ## ERROR ##
- * cur input [{[{({}]{}}([{[{{{}}([]        result =     57    ## ERROR ##
- * cur input {<[[]]>}<{[{[{[]{()[[[]        result =      0    -- OK --
- * cur input [<(<(<(<{}))><([]([]()         result =      3    ## ERROR ##
- * cur input <{([([[(<>()){}]>(<<{{         result =  25137    ## ERROR ##
- * cur input <{([{{}}[<[[[<>{}]]]>[]]       result =      0    -- OK --
+ * Part 1 [({(<(())[]>[[{[]{<()<>>         Score-Value  =      0    -- OK --
+ * Part 1 [(()[<>])]({[<{<<[]>>(           Score-Value  =      0    -- OK --
+ * Part 1 {([(<{}[<>[]}>{[]{[(<()>         Score-Value  =   1197    ## ERROR ##
+ * Part 1 (((({<>}<{<{<>}{[]{[]{}          Score-Value  =      0    -- OK --
+ * Part 1 [[<[([]))<([[{}[[()]]]           Score-Value  =      3    ## ERROR ##
+ * Part 1 [{[{({}]{}}([{[{{{}}([]          Score-Value  =     57    ## ERROR ##
+ * Part 1 {<[[]]>}<{[{[{[]{()[[[]          Score-Value  =      0    -- OK --
+ * Part 1 [<(<(<(<{}))><([]([]()           Score-Value  =      3    ## ERROR ##
+ * Part 1 <{([([[(<>()){}]>(<<{{           Score-Value  =  25137    ## ERROR ##
+ * Part 1 <{([{{}}[<[[[<>{}]]]>[]]         Score-Value  =      0    -- OK --
+ * 
+ * Part 2 [({(<(())[]>[[{[]{<()<>>       = Completion String }}]])})]    Score-Value =  288957
+ * Part 2 [(()[<>])]({[<{<<[]>>(         = Completion String )}>]})      Score-Value =    5566
+ * Part 2 (((({<>}<{<{<>}{[]{[]{}        = Completion String }}>}>))))   Score-Value = 1480781
+ * Part 2 {<[[]]>}<{[{[{[]{()[[[]        = Completion String ]]}}]}]}>   Score-Value =  995444
+ * Part 2 <{([{{}}[<[[[<>{}]]]>[]]       = Completion String ])}>        Score-Value =     294
+ * 
+ * (5) [294, 5566, 288957, 995444, 1480781]
+ * 
+ * Mid Index 2
  * 
  * Result Part 1 = 26397
- * Result Part 2 = 0
+ * Result Part 2 = 288957
  * 
  * Day 10 - End
  * 
- * 
  */
+
+type SyntaxOk = { result_val : number, completion_string : string };
 
 class SyntaxStack 
 {
@@ -66,6 +89,11 @@ class SyntaxStack
     size(): number 
     {
         return this.items.length;
+    }
+
+    hasItems(): boolean 
+    {
+        return this.items.length > 0;
     }
 
     isEmpty(): boolean 
@@ -129,7 +157,7 @@ function padR( pInput : string | number, pPadRight : number ) : string
 }
 
 
-function checkSyntax( pInput : string ) : number
+function checkSyntaxPart1( pInput : string ) : number
 {
     let stack : SyntaxStack = new SyntaxStack();
 
@@ -147,9 +175,9 @@ function checkSyntax( pInput : string ) : number
             {
                 let result_val : number = 0;
 
-                     if ( cur_char === ")" ) { result_val = 3; }
-                else if ( cur_char === "]" ) { result_val = 57; }
-                else if ( cur_char === "}" ) { result_val = 1197; }
+                     if ( cur_char === ")" ) { result_val =     3; }
+                else if ( cur_char === "]" ) { result_val =    57; }
+                else if ( cur_char === "}" ) { result_val =  1197; }
                 else if ( cur_char === ">" ) { result_val = 25137; }
 
                 return result_val;
@@ -158,6 +186,44 @@ function checkSyntax( pInput : string ) : number
     }
 
     return 0;
+}
+
+
+function checkSyntaxPart2( pInput : string ) : SyntaxOk
+{
+    let stack : SyntaxStack = new SyntaxStack();
+
+    for ( const cur_char of pInput )
+    {
+             if ( cur_char === "(" ) { stack.push( ")" ); }
+        else if ( cur_char === "[" ) { stack.push( "]" ); }
+        else if ( cur_char === "{" ) { stack.push( "}" ); }
+        else if ( cur_char === "<" ) { stack.push( ">" ); }
+        else 
+        {
+            stack.pop();
+        }
+    }
+
+    let result_completion_string : string = "";
+
+    let result_val : number = 0;
+
+    while( stack.hasItems() )
+    {
+        let cur_char : string = stack.pop()!;
+
+        result_completion_string += cur_char;
+
+        result_val = result_val * 5;
+
+             if ( cur_char === ")" ) { result_val += 1; }
+        else if ( cur_char === "]" ) { result_val += 2; }
+        else if ( cur_char === "}" ) { result_val += 3; }
+        else if ( cur_char === ">" ) { result_val += 4; }
+    }
+
+    return { result_val : result_val, completion_string : result_completion_string };
 }
 
 
@@ -172,17 +238,60 @@ function calcArray( pArray : string[], pKnzDebug : boolean = true ) : void
     let result_part_01 : number = 0;
     let result_part_02 : number = 0;
 
+    let part2_input : string[] = [];
+
     for ( const cur_input_str of pArray ) 
     {
-        let cur_result : number = checkSyntax( cur_input_str ); 
+        let cur_result : number = checkSyntaxPart1( cur_input_str ); 
 
         if ( pKnzDebug )
         {
-            wl( "cur input " + padR( cur_input_str, 30 ) + " result = " + padL( cur_result, 6 ) + "   " + ( cur_result === 0 ? " -- OK -- " : " ## ERROR ## " ));
+            wl( "Part 1 " + padR( cur_input_str, 30 ) + "   Score-Value  = " + padL( cur_result, 6 ) + "   " + ( cur_result === 0 ? " -- OK -- " : " ## ERROR ## " ));
+        }
+
+        if ( cur_result === 0 )
+        {
+            part2_input.push( cur_input_str );
         }
 
        result_part_01 += cur_result;
     }
+ 
+    /*
+     * *******************************************************************************************************
+     * Calculating Part 2
+     * *******************************************************************************************************
+     */
+
+    let score_array : number[] = [];
+
+    wl( "" );
+
+    for ( const cur_input_str of part2_input ) 
+    {
+        let cur_result : SyntaxOk = checkSyntaxPart2( cur_input_str ); 
+
+        if ( pKnzDebug )
+        {
+            wl( "Part 2 " + padR( cur_input_str, 30 ) + " = Completion String " + padR( cur_result.completion_string, 10 ) + "  Score-Value = " + padL( cur_result.result_val, 7 ) );
+        }
+
+        score_array.push( cur_result.result_val );
+    }
+
+    score_array.sort( ( a, b ) => a - b );
+
+    if ( pKnzDebug )
+    {
+        wl( "" );
+
+        console.log( score_array );
+
+        wl( "" );
+        wl( "Mid Index " + Math.floor( score_array.length / 2 ));
+    }
+
+    result_part_02 = score_array[ Math.floor( score_array.length / 2 ) ]!;
  
     wl( "" );
     wl( "Result Part 1 = " + result_part_01 );
@@ -267,7 +376,7 @@ wl( "" );
 wl( "Day 10 - Syntax Scoring" );
 wl( "" );
 
-//calcArray( getTestArray2(), true );
+calcArray( getTestArray2(), true );
 
 calcArray( getTestArray1(), true );
 
